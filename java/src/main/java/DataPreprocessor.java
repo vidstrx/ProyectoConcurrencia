@@ -11,32 +11,67 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.util.Locale;
+
 public class DataPreprocessor {
 
+    /*
+     * Limpia el texto de cada reseña.
+     */
     public static String limpiarTexto(String texto) {
 
-        // Manejar valores nulos
+        // 1. Manejar valores nulos o vacíos
         if (texto == null || texto.trim().isEmpty()) {
             return "";
         }
 
-        // Convertir a minúsculas
-        texto = texto.toLowerCase();
+        // 2. Convertir todo a minúsculas
+        texto = texto.toLowerCase(Locale.ROOT);
 
-        // Eliminar URLs
-        texto = texto.replaceAll("https?://\\S+|www\\.\\S+", " ");
+        // 3. Eliminar URLs
+        texto = texto.replaceAll(
+                "https?://\\S+|www\\.\\S+",
+                " "
+        );
 
-        // Eliminar caracteres especiales
-        // Se conservan letras, números y espacios
-        texto = texto.replaceAll("[^a-z0-9\\s]", " ");
+        // 4. Eliminar números
+        texto = texto.replaceAll(
+                "[0-9]+",
+                " "
+        );
 
-        // Normalizar espacios
-        texto = texto.replaceAll("\\s+", " ").trim();
+        // 5. Eliminar caracteres especiales
+        // Solo se conservan letras y espacios
+        texto = texto.replaceAll(
+                "[^a-z\\s]",
+                " "
+        );
+
+        // 6. Eliminar palabras de una sola letra
+        // Ejemplos: a, i, s, x
+        texto = texto.replaceAll(
+                "\\b[a-z]\\b",
+                " "
+        );
+
+        // 7. Eliminar espacios repetidos
+        texto = texto.replaceAll(
+                "\\s+",
+                " "
+        ).trim();
 
         return texto;
     }
 
 
+    /*
+     * Procesa el CSV completo y genera
+     * los tres datasets:
+     *
+     * Small
+     * Medium
+     * Large
+     */
     public static void procesarDataset(
             String archivoEntrada,
             String carpetaSalida,
@@ -60,7 +95,7 @@ public class DataPreprocessor {
 
         try {
 
-            // Crear carpeta de salida si no existe
+            // Crear la carpeta de salida si no existe
             Files.createDirectories(salida);
 
             try (
@@ -100,13 +135,28 @@ public class DataPreprocessor {
 
                     totalLeidos++;
 
-                    String reviewText =
-                            registro.get("reviewText");
+                    /*
+                     * Solo utilizamos reviewText porque
+                     * es el campo necesario para WordCount
+                     * y Frequency Analysis.
+                     */
+                    String reviewText;
+
+                    try {
+                        reviewText = registro.get("reviewText");
+                    } catch (Exception e) {
+                        totalEliminados++;
+                        continue;
+                    }
 
                     String textoLimpio =
                             limpiarTexto(reviewText);
 
-                    // Eliminar registros sin texto útil
+                    /*
+                     * Si después de la limpieza
+                     * la reseña queda vacía,
+                     * se descarta.
+                     */
                     if (textoLimpio.isEmpty()) {
                         totalEliminados++;
                         continue;
@@ -114,27 +164,45 @@ public class DataPreprocessor {
 
                     totalValidos++;
 
-                    // Dataset grande:
-                    // todas las reseñas válidas
+
+                    /*
+                     * LARGE
+                     * Guarda todas las reseñas válidas.
+                     */
                     large.write(textoLimpio);
                     large.newLine();
 
-                    // Dataset pequeño
+
+                    /*
+                     * SMALL
+                     */
                     if (totalValidos <= limiteSmall) {
+
                         small.write(textoLimpio);
                         small.newLine();
                     }
 
-                    // Dataset mediano
+
+                    /*
+                     * MEDIUM
+                     */
                     if (totalValidos <= limiteMedium) {
+
                         medium.write(textoLimpio);
                         medium.newLine();
                     }
 
+
+                    /*
+                     * Mostrar progreso cada
+                     * 100,000 registros.
+                     */
                     if (totalLeidos % 100000 == 0) {
 
                         System.out.printf(
-                                "Leídos: %,d | Válidos: %,d | Eliminados: %,d%n",
+                                "Leídos: %,d | " +
+                                "Válidos: %,d | " +
+                                "Eliminados: %,d%n",
                                 totalLeidos,
                                 totalValidos,
                                 totalEliminados
@@ -143,28 +211,47 @@ public class DataPreprocessor {
                 }
             }
 
+
+            /*
+             * Resumen final
+             */
             System.out.println();
-            System.out.println("PREPROCESAMIENTO TERMINADO");
+            System.out.println(
+                    "PREPROCESAMIENTO TERMINADO"
+            );
+
             System.out.printf(
-                    "Registros leídos: %,d%n",
+                    "Registros originales leídos: %,d%n",
                     totalLeidos
             );
 
             System.out.printf(
-                    "Registros válidos: %,d%n",
+                    "Reseñas válidas: %,d%n",
                     totalValidos
             );
 
             System.out.printf(
-                    "Registros eliminados: %,d%n",
+                    "Reseñas eliminadas: %,d%n",
                     totalEliminados
             );
 
             System.out.println();
-            System.out.println("Archivos generados:");
-            System.out.println(archivoSmall);
-            System.out.println(archivoMedium);
-            System.out.println(archivoLarge);
+            System.out.println(
+                    "Archivos generados:"
+            );
+
+            System.out.println(
+                    "Small:  " + archivoSmall
+            );
+
+            System.out.println(
+                    "Medium: " + archivoMedium
+            );
+
+            System.out.println(
+                    "Large:  " + archivoLarge
+            );
+
 
         } catch (Exception e) {
 
