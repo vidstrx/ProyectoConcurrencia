@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Collections;
 
 public class FrequencyAnalyzer{
-    private String nombre_archivo;
-    private String carpeta_salida;
     private String nombre_archivo_output;
     private final int LIMITE = 5000;
     private final int TOP = 20;
@@ -26,9 +24,6 @@ public class FrequencyAnalyzer{
     private List<Registro> filtradas = new ArrayList<>();
 
     public FrequencyAnalyzer(String nombre_archivo, String carpeta_salida){
-        this.nombre_archivo = nombre_archivo;
-        this.carpeta_salida = carpeta_salida;
-
         Path dirPath = Paths.get(carpeta_salida);
         if (nombre_archivo.contains("small")){
             if(nombre_archivo.contains("small1"))
@@ -79,7 +74,7 @@ public class FrequencyAnalyzer{
             }
             Collections.sort(filtradas);
 
-            for (int i = 0; i < TOP; i++){
+            for (int i = 0; i < TOP && i < filtradas.size(); i++){
                 bw.write(filtradas.get(i).palabra() + "\t" + filtradas.get(i).cantidad());
                 bw.newLine();
             }
