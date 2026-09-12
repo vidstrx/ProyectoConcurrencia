@@ -157,6 +157,18 @@ public class Main {
             boolean wcSuccess = wordCountJob.waitForCompletion(true);
             System.exit(wcSuccess ? 0 : 1);
             return;
+        }else if (args[0].equals("fa")){ //Frequency analysis
+                if (!(args[1].equals("1") || args[1].equals("2")) || args.length != 4) {
+                        System.out.println(
+                                "Uso:\njava Main fa <cantidad_palabras (1 o 2)> <archivo_entrada> <carpeta_salida>\n"
+                        );
+                        System.out.println(
+                                "Ejemplo:\njava Main fa 2 medium1_wordcount_output_part-r-00000.txt output\n"
+                        );
+                        return;
+                }
+                FrequencyAnalyzer fa = new FrequencyAnalyzer(args[2], args[3]);
+
         }
         return;
     }
