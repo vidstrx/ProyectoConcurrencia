@@ -11,21 +11,50 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 public class DataPreprocessor {
 
     /*
+     * Carga el diccionario de palabras que no son
+     * relevantes para el análisis (stopwords).
+     */
+    public static Set<String> cargarStopwords(String archivoStopwords)
+            throws Exception {
+
+        Set<String> stopwords = new HashSet<>();
+
+        for (String linea : Files.readAllLines(
+                Path.of(archivoStopwords),
+                StandardCharsets.UTF_8)) {
+
+            String palabra =
+                    linea.trim().toLowerCase(Locale.ROOT);
+
+            if (!palabra.isEmpty()) {
+                stopwords.add(palabra);
+            }
+        }
+
+        return stopwords;
+    }
+
+
+    /*
      * Limpia el texto de cada reseña.
      */
-    public static String limpiarTexto(String texto) {
+    public static String limpiarTexto(
+            String texto,
+            Set<String> stopwords) {
 
         // 1. Manejar valores nulos o vacíos
         if (texto == null || texto.trim().isEmpty()) {
             return "";
         }
 
-        // 2. Convertir todo a minúsculas
+        // 2. Convertir a minúsculas
         texto = texto.toLowerCase(Locale.ROOT);
 
         // 3. Eliminar URLs
@@ -41,42 +70,48 @@ public class DataPreprocessor {
         );
 
         // 5. Eliminar caracteres especiales
-        // Solo se conservan letras y espacios
+        // Solo quedan letras y espacios
         texto = texto.replaceAll(
                 "[^a-z\\s]",
                 " "
         );
 
-        // 6. Eliminar palabras de una sola letra
-        // Ejemplos: a, i, s, x
-        texto = texto.replaceAll(
-                "\\b[a-z]\\b",
-                " "
-        );
-
-        // 7. Eliminar espacios repetidos
+        // 6. Normalizar espacios
         texto = texto.replaceAll(
                 "\\s+",
                 " "
         ).trim();
 
-        return texto;
+        // 7. Eliminar tokens de una sola letra
+        // y palabras contenidas en el diccionario.
+        StringBuilder resultado = new StringBuilder();
+
+        for (String palabra : texto.split("\\s+")) {
+
+            if (palabra.length() > 1
+                    && !stopwords.contains(palabra)) {
+
+                if (resultado.length() > 0) {
+                    resultado.append(" ");
+                }
+
+                resultado.append(palabra);
+            }
+        }
+
+        return resultado.toString().trim();
     }
 
 
     /*
-     * Procesa el CSV completo y genera
-     * los tres datasets:
-     *
-     * Small
-     * Medium
-     * Large
+     * Procesa el CSV y genera los tres tamaños.
      */
     public static void procesarDataset(
             String archivoEntrada,
             String carpetaSalida,
             long limiteSmall,
-            long limiteMedium) {
+            long limiteMedium,
+            String archivoStopwords) {
 
         long totalLeidos = 0;
         long totalValidos = 0;
@@ -95,8 +130,15 @@ public class DataPreprocessor {
 
         try {
 
-            // Crear la carpeta de salida si no existe
             Files.createDirectories(salida);
+
+            Set<String> stopwords =
+                    cargarStopwords(archivoStopwords);
+
+            System.out.println(
+                    "Stopwords cargadas: "
+                    + stopwords.size()
+            );
 
             try (
                     Reader reader = new InputStreamReader(
@@ -135,29 +177,29 @@ public class DataPreprocessor {
 
                     totalLeidos++;
 
-                    /*
-                     * Solo utilizamos reviewText porque
-                     * es el campo necesario para WordCount
-                     * y Frequency Analysis.
-                     */
                     String reviewText;
 
                     try {
-                        reviewText = registro.get("reviewText");
+                        reviewText =
+                                registro.get("reviewText");
+
                     } catch (Exception e) {
+
                         totalEliminados++;
                         continue;
                     }
 
                     String textoLimpio =
-                            limpiarTexto(reviewText);
+                            limpiarTexto(
+                                    reviewText,
+                                    stopwords
+                            );
 
-                    /*
-                     * Si después de la limpieza
-                     * la reseña queda vacía,
-                     * se descarta.
-                     */
+                    // Si después de toda la limpieza
+                    // ya no queda contenido útil,
+                    // se elimina la reseña.
                     if (textoLimpio.isEmpty()) {
+
                         totalEliminados++;
                         continue;
                     }
@@ -165,17 +207,12 @@ public class DataPreprocessor {
                     totalValidos++;
 
 
-                    /*
-                     * LARGE
-                     * Guarda todas las reseñas válidas.
-                     */
+                    // LARGE
                     large.write(textoLimpio);
                     large.newLine();
 
 
-                    /*
-                     * SMALL
-                     */
+                    // SMALL
                     if (totalValidos <= limiteSmall) {
 
                         small.write(textoLimpio);
@@ -183,9 +220,7 @@ public class DataPreprocessor {
                     }
 
 
-                    /*
-                     * MEDIUM
-                     */
+                    // MEDIUM
                     if (totalValidos <= limiteMedium) {
 
                         medium.write(textoLimpio);
@@ -193,16 +228,13 @@ public class DataPreprocessor {
                     }
 
 
-                    /*
-                     * Mostrar progreso cada
-                     * 100,000 registros.
-                     */
+                    // Mostrar progreso
                     if (totalLeidos % 100000 == 0) {
 
                         System.out.printf(
-                                "Leídos: %,d | " +
-                                "Válidos: %,d | " +
-                                "Eliminados: %,d%n",
+                                "Leídos: %,d | "
+                                + "Válidos: %,d | "
+                                + "Eliminados: %,d%n",
                                 totalLeidos,
                                 totalValidos,
                                 totalEliminados
@@ -212,9 +244,6 @@ public class DataPreprocessor {
             }
 
 
-            /*
-             * Resumen final
-             */
             System.out.println();
             System.out.println(
                     "PREPROCESAMIENTO TERMINADO"
@@ -236,9 +265,7 @@ public class DataPreprocessor {
             );
 
             System.out.println();
-            System.out.println(
-                    "Archivos generados:"
-            );
+            System.out.println("Archivos generados:");
 
             System.out.println(
                     "Small:  " + archivoSmall
@@ -251,7 +278,6 @@ public class DataPreprocessor {
             System.out.println(
                     "Large:  " + archivoLarge
             );
-
 
         } catch (Exception e) {
 
