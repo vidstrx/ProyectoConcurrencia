@@ -14,104 +14,138 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.StringTokenizer;
 
 public class DataPreprocessor {
 
     /*
-     * Carga el diccionario de palabras que no son
-     * relevantes para el análisis (stopwords).
+     * Carga desde un archivo externo las palabras
+     * permitidas para el análisis.
      */
-    public static Set<String> cargarStopwords(String archivoStopwords)
+    public static Set<String> cargarWhitelist(String archivoWhitelist)
             throws Exception {
 
-        Set<String> stopwords = new HashSet<>();
+        Set<String> whitelist = new HashSet<>();
 
         for (String linea : Files.readAllLines(
-                Path.of(archivoStopwords),
+                Path.of(archivoWhitelist),
                 StandardCharsets.UTF_8)) {
 
             String palabra =
                     linea.trim().toLowerCase(Locale.ROOT);
 
             if (!palabra.isEmpty()) {
-                stopwords.add(palabra);
+                whitelist.add(palabra);
             }
         }
 
-        return stopwords;
+        return whitelist;
     }
 
 
     /*
-     * Limpia el texto de cada reseña.
+     * Limpia cada reseña y conserva únicamente
+     * palabras presentes en la whitelist.
      */
     public static String limpiarTexto(
             String texto,
-            Set<String> stopwords) {
+            Set<String> whitelist) {
 
-        // 1. Manejar valores nulos o vacíos
+        // Validar nulos y vacíos
         if (texto == null || texto.trim().isEmpty()) {
             return "";
         }
 
-        // 2. Convertir a minúsculas
         texto = texto.toLowerCase(Locale.ROOT);
 
-        // 3. Eliminar URLs
-        texto = texto.replaceAll(
-                "https?://\\S+|www\\.\\S+",
-                " "
-        );
-
-        // 4. Eliminar números
-        texto = texto.replaceAll(
-                "[0-9]+",
-                " "
-        );
-
-        // 5. Eliminar caracteres especiales
-        // Solo quedan letras y espacios
-        texto = texto.replaceAll(
-                "[^a-z\\s]",
-                " "
-        );
-
-        // 6. Normalizar espacios
-        texto = texto.replaceAll(
-                "\\s+",
-                " "
-        ).trim();
-
-        // 7. Eliminar tokens de una sola letra
-        // y palabras contenidas en el diccionario.
         StringBuilder resultado = new StringBuilder();
 
-        for (String palabra : texto.split("\\s+")) {
+        /*
+         * Primero separamos por espacios.
+         */
+        StringTokenizer tokenizer =
+                new StringTokenizer(texto);
 
-            if (palabra.length() > 1
-                    && !stopwords.contains(palabra)) {
+        while (tokenizer.hasMoreTokens()) {
 
-                if (resultado.length() > 0) {
-                    resultado.append(" ");
+            String token = tokenizer.nextToken();
+
+            // Ignorar URLs
+            if (token.startsWith("http://")
+                    || token.startsWith("https://")
+                    || token.startsWith("www.")) {
+
+                continue;
+            }
+
+            /*
+             * Separamos las palabras utilizando cualquier
+             * carácter que no sea una letra.
+             *
+             * Ejemplo:
+             * "high-quality!!!" -> high / quality
+             *
+             * No usamos expresiones regulares.
+             */
+            StringBuilder palabraActual =
+                    new StringBuilder();
+
+            for (int i = 0; i <= token.length(); i++) {
+
+                char caracter;
+
+                if (i < token.length()) {
+                    caracter = token.charAt(i);
+                } else {
+                    // Fuerza el procesamiento de la última palabra
+                    caracter = ' ';
                 }
 
-                resultado.append(palabra);
+                if (caracter >= 'a' && caracter <= 'z') {
+
+                    palabraActual.append(caracter);
+
+                } else {
+
+                    if (palabraActual.length() > 0) {
+
+                        String palabra =
+                                palabraActual.toString();
+
+                        /*
+                         * Solamente conservar palabras
+                         * presentes en la whitelist.
+                         */
+                        if (palabra.length() > 1
+                                && whitelist.contains(palabra)) {
+
+                            if (resultado.length() > 0) {
+                                resultado.append(" ");
+                            }
+
+                            resultado.append(palabra);
+                        }
+
+                        palabraActual.setLength(0);
+                    }
+                }
             }
         }
 
-        return resultado.toString().trim();
+        return resultado.toString();
     }
 
 
     /*
-     * Procesa el CSV y genera los tres tamaños.
+     * Procesa el CSV completo y genera
+     * Small, Medium y Large.
      */
     public static void procesarDataset(
             String archivoEntrada,
             String carpetaSalida,
             long limiteSmall,
             long limiteMedium,
-            String archivoStopwords) {
+            String archivoWhitelist) {
 
         long totalLeidos = 0;
         long totalValidos = 0;
@@ -132,12 +166,12 @@ public class DataPreprocessor {
 
             Files.createDirectories(salida);
 
-            Set<String> stopwords =
-                    cargarStopwords(archivoStopwords);
+            Set<String> whitelist =
+                    cargarWhitelist(archivoWhitelist);
 
             System.out.println(
-                    "Stopwords cargadas: "
-                    + stopwords.size()
+                    "Palabras cargadas en whitelist: "
+                    + whitelist.size()
             );
 
             try (
@@ -180,6 +214,7 @@ public class DataPreprocessor {
                     String reviewText;
 
                     try {
+
                         reviewText =
                                 registro.get("reviewText");
 
@@ -192,12 +227,14 @@ public class DataPreprocessor {
                     String textoLimpio =
                             limpiarTexto(
                                     reviewText,
-                                    stopwords
+                                    whitelist
                             );
 
-                    // Si después de toda la limpieza
-                    // ya no queda contenido útil,
-                    // se elimina la reseña.
+                    /*
+                     * Si ninguna palabra de la reseña
+                     * pertenece a la whitelist,
+                     * se elimina el registro.
+                     */
                     if (textoLimpio.isEmpty()) {
 
                         totalEliminados++;
@@ -228,7 +265,6 @@ public class DataPreprocessor {
                     }
 
 
-                    // Mostrar progreso
                     if (totalLeidos % 100000 == 0) {
 
                         System.out.printf(
@@ -278,6 +314,7 @@ public class DataPreprocessor {
             System.out.println(
                     "Large:  " + archivoLarge
             );
+
 
         } catch (Exception e) {
 
