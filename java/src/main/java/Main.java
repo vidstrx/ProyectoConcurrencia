@@ -23,7 +23,7 @@ public class Main {
 
             System.out.println(
                     "\nDataPreprocessor:\njava Main dp <archivo_csv> <carpeta_salida> "
-                    + "<limite_small> <limite_medium> <archivo_stopwords>"
+                    + "<limite_small> <limite_medium> <archivo_whitelist>"
             );
 
             System.out.println(
@@ -32,13 +32,24 @@ public class Main {
 
             System.out.println(
                     "java Main dp Automotive.csv processed "
-                    + "1000000 3000000 config/stopwords_en.txt"
+                    + "1000000 3000000 config/whitelist.txt"
             );
 
             System.out.println(
                     "\nWordCount:\njava Main wc <cantidad_palabras (1 o 2)> <archivo_entrada> <carpeta_salida> "
             );
 
+            System.out.println(
+                    "Ejemplo:\njava Main wc 1 Automotive_medium.txt output"
+            );
+            
+            System.out.println(
+                    "\nFrequencyAnalyzer:\njava Main fa <archivo_entrada> <carpeta_salida> "
+            );
+
+            System.out.println(
+                    "Ejemplo:\njava Main fa medium1_wordcount_output_part-r-00000.txt output"
+            );
             return;
         }
 
@@ -64,7 +75,7 @@ public class Main {
 
                 System.out.println(
                         "java Main dp Automotive.csv processed "
-                        + "1000000 3000000 config/stopwords_en.txt"
+                        + "1000000 3000000 config/whitelist.txt"
                 );
 
                 return;
@@ -98,7 +109,7 @@ public class Main {
             }
 
 
-            String archivoStopwords = args[5];
+            String archivoWhitelist = args[5];
 
 
             if (limiteSmall <= 0 ||
@@ -126,7 +137,7 @@ public class Main {
             );
 
             System.out.println(
-                    "Stopwords: " + archivoStopwords
+                    "Whitelist: " + archivoWhitelist
             );
 
             System.out.printf(
@@ -151,7 +162,7 @@ public class Main {
                     carpetaSalida,
                     limiteSmall,
                     limiteMedium,
-                    archivoStopwords
+                    archivoWhitelist
             );
 
 
