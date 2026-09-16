@@ -80,6 +80,7 @@ public class FrequencyAnalyzer{
             }
             br.close();
             bw.close();
+            System.out.println("Se realizo exitosamente el Frequency Analyzer\nGuardado en la carpeta: " + dirPath.resolve(nombre_archivo_output+".txt").toString());
         }catch(IOException e){
             e.printStackTrace();
             return;

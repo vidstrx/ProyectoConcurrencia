@@ -223,7 +223,7 @@ public class Main {
                         );
                         return;
                 }
-                FrequencyAnalyzer fa = new FrequencyAnalyzer(args[1], args[2]);
+                new FrequencyAnalyzer(args[1], args[2]);
 
         }
 
