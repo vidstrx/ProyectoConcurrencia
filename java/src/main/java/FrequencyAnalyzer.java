@@ -12,7 +12,7 @@ import java.util.Collections;
 
 public class FrequencyAnalyzer{
     private String nombre_archivo_output;
-    private final int LIMITE = 5000;
+    private final int LIMITE = 5000; // Minimum Support
     private final int TOP = 20;
 
     public record Registro(String palabra, long cantidad) implements Comparable<Registro>{
@@ -64,18 +64,19 @@ public class FrequencyAnalyzer{
         try (BufferedReader br = new BufferedReader(new FileReader(nombre_archivo))){
             BufferedWriter bw = new BufferedWriter(new FileWriter(dirPath.resolve(nombre_archivo_output+".txt").toString()));
             String linea = "";
+            // revisa cada linea del resultado del wordcount y para hacer el top 20 palabras
             while((linea = br.readLine()) != null){
-                String[] campos = linea.split("\t");
-                long cantidad = Long.parseLong(campos[campos.length - 1]);
-                if(cantidad >= LIMITE){
+                String[] campos = linea.split("\t"); // separar los campos por Tab, ya que asi devuelve el resultado el wordcount
+                long cantidad = Long.parseLong(campos[campos.length - 1]); // agarrar la cantidad de apariciones de la palabra o palabras
+                if(cantidad >= LIMITE){ // verifica si esa cantidad cumple con el minimum support
                     Registro registro = new Registro(campos[0], cantidad);
                     filtradas.add(registro);
                 }
             }
-            Collections.sort(filtradas);
+            Collections.sort(filtradas); // ordena de mayor a menor las palabras que pasaron el minimum support
 
             for (int i = 0; i < TOP && i < filtradas.size(); i++){
-                bw.write(filtradas.get(i).palabra() + "\t" + filtradas.get(i).cantidad());
+                bw.write(filtradas.get(i).palabra() + "\t" + filtradas.get(i).cantidad()); // escribir en el archivo de salidae el top 20
                 bw.newLine();
             }
             br.close();

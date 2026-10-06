@@ -15,15 +15,15 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 public class Main {
 
     public static void main(String[] args) throws Exception{
-
+        // comandos para poder ejecutar cada uno de las aplicaciones, desde el main
         if (args.length <= 1 || !(args[0].equals("dp") || args[0].equals("wc") || args[0].equals("fa"))) {
             System.out.println(
-                    "Uso: java Main <tipo_trabajo> <args>"
+                    "Uso: mvn exec:java -Dargs=\"<tipo_trabajo> <args>\""
             );
 
             System.out.println(
-                    "\nDataPreprocessor:\njava Main dp <archivo_csv> <carpeta_salida> "
-                    + "<limite_small> <limite_medium> <archivo_whitelist>"
+                    "\nDataPreprocessor:\nmvn exec:java -Dargs=\"dp <archivo_csv> <carpeta_salida> "
+                    + "<limite_small> <limite_medium> <archivo_whitelist>\""
             );
 
             System.out.println(
@@ -31,31 +31,31 @@ public class Main {
             );
 
             System.out.println(
-                    "java Main dp Automotive.csv processed "
-                    + "1000000 3000000 config/whitelist.txt"
+                    "mvn exec:java -Dargs=\"dp Automotive.csv processed "
+                    + "1000000 3000000 config/whitelist.txt\""
             );
 
             System.out.println(
-                    "\nWordCount:\njava Main wc <cantidad_palabras (1 o 2)> <archivo_entrada> <carpeta_salida> "
+                    "\nWordCount:\nmvn exec:java -Dargs=\"wc <cantidad_palabras (1 o 2)> <archivo_entrada> <carpeta_salida> "
             );
 
             System.out.println(
-                    "Ejemplo:\njava Main wc 1 Automotive_medium.txt output"
+                    "Ejemplo:\nmvn exec:java -Dargs=\"wc 1 Automotive_medium.txt output\""
             );
             
             System.out.println(
-                    "\nFrequencyAnalyzer:\njava Main fa <archivo_entrada> <carpeta_salida> "
+                    "\nFrequencyAnalyzer:\nmvn exec:java -Dargs=\"fa <archivo_entrada> <carpeta_salida>\""
             );
 
             System.out.println(
-                    "Ejemplo:\njava Main fa medium1_wordcount_output_part-r-00000.txt output"
+                    "Ejemplo:\nmvn exec:java -Dargs=\"fa medium1_wordcount_output_part-r-00000.txt output\""
             );
             return;
         }
 
 
         if (args[0].equals("dp")) { // DataPreprocessor
-
+            // validaciones del comando para ejecutar el DataPreprocessor
             if (args.length != 6) {
 
                 System.out.println(
@@ -63,8 +63,8 @@ public class Main {
                 );
 
                 System.out.println(
-                        "java Main dp <archivo_csv> <carpeta_salida> "
-                        + "<limite_small> <limite_medium> <archivo_stopwords>"
+                        "mvn exec:java -Dargs=\"dp <archivo_csv> <carpeta_salida> "
+                        + "<limite_small> <limite_medium> <archivo_stopwords>\""
                 );
 
                 System.out.println();
@@ -74,8 +74,8 @@ public class Main {
                 );
 
                 System.out.println(
-                        "java Main dp Automotive.csv processed "
-                        + "1000000 3000000 config/whitelist.txt"
+                        "mvn exec:java -Dargs=\"dp Automotive.csv processed "
+                        + "1000000 3000000 config/whitelist.txt\""
                 );
 
                 return;
@@ -90,7 +90,7 @@ public class Main {
 
             long limiteMedium;
 
-
+            // validaciones de la cantidad de lineas que se quieren en archivo small y medium
             try {
 
                 limiteSmall =
@@ -127,7 +127,7 @@ public class Main {
                 return;
             }
 
-
+            // Ejecutando ya el DataPreprocessor
             System.out.println(
                     "Iniciando DataPreprocessor..."
             );
@@ -156,7 +156,7 @@ public class Main {
 
             System.out.println();
 
-
+            // Clase que ejecuta la limpieza del dataset
             DataPreprocessor.procesarDataset(
                     archivoEntrada,
                     carpetaSalida,
@@ -167,24 +167,24 @@ public class Main {
 
 
         } else if (args[0].equals("wc")){ // WordCount
-
+            // validaciones para la ejecucion del wordcount
             if (!(args[1].equals("1") || args[1].equals("2")) || args.length != 4) {
 
                 System.out.println(
-                        "Uso:\njava Main wc <cantidad_palabras (1 o 2)> <archivo_entrada> <carpeta_salida>\n"
+                        "Uso:\nmvn exec:java -Dargs=\"wc <cantidad_palabras (1 o 2)> <archivo_entrada> <carpeta_salida>\"\n"
                 );
 
                 System.out.println(
-                        "Ejemplo:\njava Main wc 1 Automotive_medium.txt output\n"
+                        "Ejemplo:\nmvn exec:java -Dargs=\"wc 1 Automotive_medium.txt output\"\n"
                 );
 
                 return;
             }
 
-
+            // inicio de las configuraciones del wordcount
             Configuration conf = new Configuration();
 
-            conf.set("tipo.conteo", args[1]); // Cambiar a "2" para pares de palabras
+            conf.set("tipo.conteo", args[1]); // Cambiar a "2" en el argumento para pares de palabras
 
             Job wordCountJob = Job.getInstance(conf, "Word Count " + args[1]);
 
@@ -192,11 +192,11 @@ public class Main {
 
             wordCountJob.setMapperClass(WordCount.TokenMapper.class);
 
-            wordCountJob.setCombinerClass(WordCount.TokenReducer.class);
+            wordCountJob.setCombinerClass(WordCount.TokenReducer.class); // usamos la misma clase del reducer para el combiner
 
-            wordCountJob.setPartitionerClass(WordCount.CustomPartitioner.class);
+            wordCountJob.setPartitionerClass(WordCount.CustomPartitioner.class); // partitioner personalizado
 
-            wordCountJob.setNumReduceTasks(2);
+            wordCountJob.setNumReduceTasks(2); // especificar cuantos reducers usar, depende del partitioner que se implemento en nuestro caso 2 reducers
 
             wordCountJob.setReducerClass(WordCount.TokenReducer.class);
 
@@ -204,9 +204,9 @@ public class Main {
 
             wordCountJob.setOutputValueClass(IntWritable.class);
 
-            FileInputFormat.addInputPath(wordCountJob, new Path(args[2]));
+            FileInputFormat.addInputPath(wordCountJob, new Path(args[2])); // la entrada del archivo que se hara en el wordcount
 
-            FileOutputFormat.setOutputPath(wordCountJob, new Path(args[3]));
+            FileOutputFormat.setOutputPath(wordCountJob, new Path(args[3])); // la carpeta de salida en que se guardara los resultados
 
             boolean wcSuccess = wordCountJob.waitForCompletion(true);
 
@@ -214,12 +214,13 @@ public class Main {
 
             return;
         }else if (args[0].equals("fa")){ //Frequency analysis
-                if (args.length != 3) {
+            // validaciones para ejecutar el frequency analysis    
+            if (args.length != 3) {
                         System.out.println(
-                                "Uso:\njava Main fa <archivo_entrada> <carpeta_salida>\n"
+                                "Uso:\nmvn exec:java -Dargs=\"fa <archivo_entrada> <carpeta_salida>\"\n"
                         );
                         System.out.println(
-                                "Ejemplo:\njava Main fa medium1_wordcount_output_part-r-00000.txt output\n"
+                                "Ejemplo:\nmvn exec:java -Dargs=\"fa medium1_wordcount_output_part-r-00000.txt output\"\n"
                         );
                         return;
                 }

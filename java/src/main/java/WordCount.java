@@ -15,7 +15,7 @@ public class WordCount {
         @Override
         protected void setup(Context context) {
             // Leer el parámetro definido en el Main
-            tipoConteo = context.getConfiguration().get("tipo.conteo", "1");
+            tipoConteo = context.getConfiguration().get("tipo.conteo", "1"); // por defecto se deja en 1, pero se cambia a 2 cuando se manda en el parametro
         }
 
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
