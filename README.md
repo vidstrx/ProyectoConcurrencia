@@ -61,7 +61,7 @@ mvn exec:java -Dargs="dp <csv_file> <output_dir> <small_limit> <medium_limit> <w
 ```
 
 ### Wordcount in hadoop
-To run the `WordCount` class, you need to have installed and configured hadoop, or you can use a cloud environment that provides a cluster with hadoop preinstalled and preconfigured like [GCP Platform][https://cloud.google.com/], [Azure][https://azure.microsoft.com] or [Amazon Web Services][https://aws.amazon.com].
+To run the `WordCount` class, you need to have installed and configured hadoop, or you can use a cloud environment that provides a cluster with hadoop preinstalled and preconfigured like [GCP Platform](https://cloud.google.com/), [Azure](https://azure.microsoft.com) or [Amazon Web Services](https://aws.amazon.com).
 Hadoop's mapreduce job, needs a jar file that contains the map and reduce classes to execute the wordcount job. That means we need to convert all our classes into a `jar` file.
 Run this command to convert our project into a jar file:
 
